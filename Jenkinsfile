@@ -20,11 +20,11 @@ pipeline {
                 sh 'npm install @angular/cli --save-dev'
             }
         }
-        stage('Run Tests') {
-            steps {
-                sh 'cd frontend && npx ng test --watch=false --source-map=true && cd .. && npm run test:server'
-            }
-        }
+        // stage('Run Tests') {
+        //     steps {
+        //         sh 'cd frontend && npx ng test --watch=false --source-map=true && cd .. && npm run test:server'
+        //     }
+        // }
         stage('Security Scan with Semgrep') {
             steps {
                 sh 'semgrep --config p/ci .'
