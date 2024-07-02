@@ -1,42 +1,35 @@
 pipeline {
     agent any
-
     environment {
         AWS_CREDENTIALS_ID = 'aws-credentials' // Jenkins ID for AWS credentials
         ECR_REPO_URI = '058264215547.dkr.ecr.ap-south-1.amazonaws.com/juiceshop' // ECR Repository URI
     }
-
     stages {
         stage('Checkout') {
             steps {
                 git 'https://github.com/nickhilpatil/juice-shop.git'
             }
         }
-
         stage('Install Dependencies') {
             steps {
                 sh 'npm install'
             }
         }
-
-        stage('Install Angular CLI') {
+        stage('Install Angular CLI Locally') {
             steps {
-                sh 'npm install -g @angular/cli'
+                sh 'npm install @angular/cli --save-dev'
             }
         }
-
         stage('Run Tests') {
             steps {
-                sh 'npm test'
+                sh 'cd frontend && npx ng test --watch=false --source-map=true && cd .. && npm run test:server'
             }
         }
-
         stage('Security Scan with Semgrep') {
             steps {
                 sh 'semgrep --config p/ci .'
             }
         }
-
         stage('Security Scan with Snyk') {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
@@ -44,7 +37,6 @@ pipeline {
                 }
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -52,7 +44,6 @@ pipeline {
                 }
             }
         }
-
         stage('Push Docker Image to ECR') {
             steps {
                 script {
@@ -65,7 +56,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to Elastic Beanstalk') {
             steps {
                 script {
@@ -78,6 +68,12 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            // Clean up workspace
+            cleanWs()
         }
     }
 }
