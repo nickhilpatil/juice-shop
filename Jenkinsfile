@@ -19,6 +19,12 @@ pipeline {
             }
         }
 
+        stage('Install Angular CLI') {
+            steps {
+                sh 'npm install -g @angular/cli'
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 sh 'npm test'
@@ -50,11 +56,11 @@ pipeline {
         stage('Push Docker Image to ECR') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'aws-credentials', variable: 'AWS_ACCESS_KEY_ID'),
-                                     string(credentialsId: 'aws-credentials', variable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        docker.withRegistry(ECR_REPO_URI, 'aws-ecr') {
-                            dockerImage.push()
-                        }
+                    withCredentials([aws(credentialsId: 'aws-credentials')]) {
+                        sh '''
+                            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ECR_REPO_URI}
+                            docker push ${ECR_REPO_URI}:latest
+                        '''
                     }
                 }
             }
@@ -63,9 +69,13 @@ pipeline {
         stage('Deploy to Elastic Beanstalk') {
             steps {
                 script {
-                    sh 'eb init -p docker juice-shop --region us-west-2'
-                    sh 'eb create juice-shop-env'
-                    sh 'eb deploy'
+                    withCredentials([aws(credentialsId: 'aws-credentials')]) {
+                        sh '''
+                            eb init -p docker juice-shop --region ap-south-1
+                            eb create juice-shop-env
+                            eb deploy
+                        '''
+                    }
                 }
             }
         }
